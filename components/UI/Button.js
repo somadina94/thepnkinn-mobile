@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     ...GlobalStyles.elevated,
     justifyContent: "center",
-    flex: 1,
+    minWidth: 140,
     height: 48,
   },
   text: {

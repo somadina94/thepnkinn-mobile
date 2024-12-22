@@ -59,6 +59,8 @@ function Accomodation({ navigation }) {
     data = accs.filter((el) => el.category === "apartment");
   }
 
+  const sortedData = data.sort((a, b) => a.position - b.position);
+
   return (
     <ImageBackground
       style={styles.screen}
@@ -71,7 +73,7 @@ function Accomodation({ navigation }) {
         </View>
         <FlatList
           style={styles.list}
-          data={data}
+          data={sortedData}
           renderItem={renderAccItem}
           keyExtractor={(item) => item._id}
         />

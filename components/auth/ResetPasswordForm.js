@@ -91,6 +91,7 @@ function ResetPasswordForm() {
           onBlur: passwordInputBlurHandler,
           value: passwordInput,
           placeholder: "***************",
+          secureTextEntry: true,
         }}
       />
       <Input
@@ -101,6 +102,7 @@ function ResetPasswordForm() {
           onBlur: passwordConfirmInputBlurHandler,
           value: passwordConfirmInput,
           placeholder: "***************",
+          secureTextEntry: true,
         }}
       />
       <Button

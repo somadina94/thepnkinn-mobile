@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -35,7 +35,7 @@ function Book({ route, navigation }) {
     hasError: numAdultsInputIsInvalid,
     valueInputChangedHandler: numAdultsInputChangedHandler,
     valueInputBlurHandler: numAdultsInputBlurHandler,
-  } = useInput((value) => value.trim() !== "" && +value !== 0 && +value < 4);
+  } = useInput((value) => value.trim() !== "" && +value !== 0 && +value <= 25);
 
   const {
     value: numKidsInput,
@@ -43,63 +43,107 @@ function Book({ route, navigation }) {
     hasError: numKidsInputIsInvalid,
     valueInputChangedHandler: numKidsInputChangedHandler,
     valueInputBlurHandler: numKidsInputBlurHandler,
-  } = useInput((value) => value.trim() !== "" && +value < 4);
+  } = useInput((value) => value.trim() !== "" && +value <= 25);
 
   let formIsValid = numAdultsInputIsValid && startDate && endDate;
 
   const handleDateSelect = (day) => {
-    if (!startDate) {
-      setStartDate(day.dateString);
-      setMarkedDates((prevDates) => ({
-        ...prevDates,
-        [day.dateString]: { selected: true, color: "blue", textColor: "white" },
-      }));
-    } else if (!endDate) {
-      if (new Date(day.dateString) < new Date(startDate)) {
-        Alert.alert(
-          "Invalid Selection",
-          "End date cannot be before start date."
-        );
-        return;
-      }
+    const selectedDate = day.dateString;
 
-      setEndDate(day.dateString);
-      const dates = { ...markedDates };
-
-      let current = new Date(startDate);
-      const end = new Date(day.dateString);
-
-      while (current <= end) {
-        const dateStr = current.toISOString().split("T")[0];
-        dates[dateStr] = {
-          selected: true,
-          color:
-            current.getTime() === new Date(startDate).getTime() ||
-            current.getTime() === end.getTime()
-              ? "blue"
-              : "lightblue",
-          textColor: "white",
-        };
-        current.setDate(current.getDate() + 1);
-      }
-
-      setMarkedDates(dates);
-    } else {
-      setStartDate(day.dateString);
+    // If the clicked date matches the current startDate, clear all selections
+    if (selectedDate === startDate) {
+      setStartDate(null);
       setEndDate(null);
-      setMarkedDates((prevDates) => ({
-        ...prevDates,
-        [day.dateString]: { selected: true, color: "blue", textColor: "white" },
-      }));
+      setMarkedDates({});
+      return;
+    }
+
+    // If startDate is selected and endDate is already set, update endDate to the new selected date
+    if (startDate && endDate) {
+      if (new Date(selectedDate) > new Date(startDate)) {
+        const newMarkedDates = {
+          [startDate]: { selected: true, color: "blue", textColor: "white" },
+        };
+        const start = new Date(startDate);
+        const end = new Date(selectedDate);
+        let current = start;
+
+        while (current <= end) {
+          const dateStr = current.toISOString().split("T")[0];
+          newMarkedDates[dateStr] = {
+            selected: true,
+            color:
+              current.getTime() === start.getTime() ||
+              current.getTime() === end.getTime()
+                ? "blue"
+                : "lightblue",
+            textColor: "white",
+          };
+          current.setDate(current.getDate() + 1);
+        }
+
+        setEndDate(selectedDate);
+        setMarkedDates(newMarkedDates);
+      }
+      return;
+    }
+
+    // If no startDate is selected, set the startDate
+    if (!startDate) {
+      setStartDate(selectedDate);
+      setMarkedDates({
+        [selectedDate]: { selected: true, color: "blue", textColor: "white" },
+      });
+      return;
+    }
+
+    // If startDate is selected but no endDate, set the new endDate and mark the range
+    if (!endDate) {
+      if (new Date(selectedDate) > new Date(startDate)) {
+        const newMarkedDates = {
+          [startDate]: { selected: true, color: "blue", textColor: "white" },
+        };
+        const start = new Date(startDate);
+        const end = new Date(selectedDate);
+        let current = start;
+
+        while (current <= end) {
+          const dateStr = current.toISOString().split("T")[0];
+          newMarkedDates[dateStr] = {
+            selected: true,
+            color:
+              current.getTime() === start.getTime() ||
+              current.getTime() === end.getTime()
+                ? "blue"
+                : "lightblue",
+            textColor: "white",
+          };
+          current.setDate(current.getDate() + 1);
+        }
+
+        setEndDate(selectedDate);
+        setMarkedDates(newMarkedDates);
+      }
+      return;
     }
   };
 
   const bookAccHandler = async () => {
     setIsLoading(true);
 
+    let calculatedEndDate = endDate;
+
+    // If no end date is selected, add one more day
+    if (!endDate && startDate) {
+      const startDateObj = new Date(startDate);
+      const nextDay = new Date(startDateObj);
+      nextDay.setDate(startDateObj.getDate() + 1);
+      calculatedEndDate = nextDay.toISOString().split("T")[0];
+    }
+
     const data = {
       startDate,
-      endDate,
+      endDate: calculatedEndDate,
       numAdults: numAdultsInput.trim(),
       numKids: numKidsInput || 0,
       accomodation: params.acc._id,
@@ -126,11 +170,22 @@ function Book({ route, navigation }) {
     navigation.navigate("Bookings");
   };
 
+  const totalAmountOnDatesSelected =
+    (Object.keys(markedDates).length - 1) * params.acc.pricePerNight;
+
   return (
     <ScrollView>
       <KeyboardAvoidingView behavior="padding">
         <Text style={styles.name}>{params.acc.name}</Text>
-        <Calendar markedDates={markedDates} onDayPress={handleDateSelect} />
+        <Text style={styles.name}>
+          Total:{" "}
+          {Object.keys(markedDates).length > 0 ? totalAmountOnDatesSelected : 0}
+        </Text>
+        <Calendar
+          markedDates={markedDates}
+          onDayPress={handleDateSelect}
+          minDate={new Date().toISOString().split("T")[0]}
+        />
         <View style={styles.inputContainer}>
           <Input
             label="No. of Adults"
@@ -158,7 +213,7 @@ function Book({ route, navigation }) {
         <View style={styles.action}>
           <Button
             title="Book Accommodation"
-            disabled={!formIsValid || !startDate || !endDate}
+            disabled={!formIsValid}
             onPress={bookAccHandler}
           />
         </View>
